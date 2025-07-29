@@ -13,7 +13,7 @@ const CORNER_COLOR = '#F72585';
 const CUTOUT_RADIUS = 22;
 
 const QRCode = () => {
-  const [permission] = useCameraPermissions();
+  const [permission, requestPermission] = useCameraPermissions();
   const [flash, setFlash] = useState<FlashMode>('off');
   const [scanned, setScanned] = useState(false);
 
@@ -24,20 +24,143 @@ const QRCode = () => {
     try {
       // Check if it's a Spotify track URL
       if (result.data.includes('open.spotify.com/track/')) {
-        // Navigate to WebView with the Spotify track URL
-        router.push({
-          pathname: '/webview',
-          params: { url: result.data }
-        });
+        // Extract track ID from the URL
+        const trackIdMatch = result.data.match(/track\/([a-zA-Z0-9]+)/);
+        if (trackIdMatch) {
+          const trackId = trackIdMatch[1];
+          
+          // Create Spotify deep link to open the track directly in the app
+          const spotifyDeepLink = `spotify://track/${trackId}`;
+          
+          // Try to open Spotify with the track
+          const canOpenSpotify = await Linking.canOpenURL(spotifyDeepLink);
+          
+          if (canOpenSpotify) {
+            // Open Spotify with the track
+            await Linking.openURL(spotifyDeepLink);
+            
+            // Show success message
+            Alert.alert(
+              'Success!',
+              'Opening Spotify with the selected track. Enjoy your music!',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => router.back()
+                }
+              ]
+            );
+          } else {
+            // Fallback to web URL if Spotify app can't be opened
+            await Linking.openURL(result.data);
+            
+            Alert.alert(
+              'Spotify Web',
+              'Opening Spotify in your browser since the app couldn\'t be launched.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => router.back()
+                }
+              ]
+            );
+          }
+        } else {
+          Alert.alert(
+            'Invalid Spotify URL',
+            'The QR code contains an invalid Spotify track URL.',
+            [{ text: 'OK' }]
+          );
+        }
+      } else if (result.data.includes('spotify.com/playlist/')) {
+        // Handle Spotify playlist URLs
+        const playlistIdMatch = result.data.match(/playlist\/([a-zA-Z0-9]+)/);
+        if (playlistIdMatch) {
+          const playlistId = playlistIdMatch[1];
+          const spotifyDeepLink = `spotify://playlist/${playlistId}`;
+          
+          const canOpenSpotify = await Linking.canOpenURL(spotifyDeepLink);
+          
+          if (canOpenSpotify) {
+            await Linking.openURL(spotifyDeepLink);
+            Alert.alert(
+              'Success!',
+              'Opening Spotify with the selected playlist. Enjoy your music!',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => router.back()
+                }
+              ]
+            );
+          } else {
+            await Linking.openURL(result.data);
+            Alert.alert(
+              'Spotify Web',
+              'Opening Spotify in your browser since the app couldn\'t be launched.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => router.back()
+                }
+              ]
+            );
+          }
+        }
+      } else if (result.data.includes('spotify.com/album/')) {
+        // Handle Spotify album URLs
+        const albumIdMatch = result.data.match(/album\/([a-zA-Z0-9]+)/);
+        if (albumIdMatch) {
+          const albumId = albumIdMatch[1];
+          const spotifyDeepLink = `spotify://album/${albumId}`;
+          
+          const canOpenSpotify = await Linking.canOpenURL(spotifyDeepLink);
+          
+          if (canOpenSpotify) {
+            await Linking.openURL(spotifyDeepLink);
+            Alert.alert(
+              'Success!',
+              'Opening Spotify with the selected album. Enjoy your music!',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => router.back()
+                }
+              ]
+            );
+          } else {
+            await Linking.openURL(result.data);
+            Alert.alert(
+              'Spotify Web',
+              'Opening Spotify in your browser since the app couldn\'t be launched.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => router.back()
+                }
+              ]
+            );
+          }
+        }
       } else {
         // For other URLs, try to open in the device's browser
         const urlPattern = /^(https?:\/\/)[^\s/$.?#].[^\s]*$/i;
         if (urlPattern.test(result.data)) {
           await Linking.openURL(result.data);
+          Alert.alert(
+            'URL Opened',
+            'Opening the link in your browser.',
+            [
+              {
+                text: 'OK',
+                onPress: () => router.back()
+              }
+            ]
+          );
         } else {
           Alert.alert(
             'Invalid QR Code',
-            'Please scan a valid URL or Spotify track QR code.',
+            'Please scan a valid URL or Spotify track/playlist/album QR code.',
             [{ text: 'OK' }]
           );
         }
@@ -54,9 +177,47 @@ const QRCode = () => {
     }
   };
 
-  if (!permission) return null;
+  // Show loading state while permission is being checked
+  if (!permission) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Show permission request screen if permission is not granted
   if (!permission.granted) {
-    return <View style={styles.container} />;
+    return (
+      <View style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <View style={styles.permissionIconContainer}>
+            <Ionicons name="camera" size={80} color="#F72585" />
+          </View>
+          <Text style={styles.permissionTitle}>Camera Permission Required</Text>
+          <Text style={styles.permissionDescription}>
+            To start a new game, we need access to your camera to scan QR codes. 
+            This allows you to join games and access music tracks.
+          </Text>
+          <TouchableOpacity 
+            style={styles.permissionButton} 
+            onPress={requestPermission}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.permissionButtonText}>Grant Camera Permission</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   }
 
   // Calculate cutout position
@@ -99,6 +260,58 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0F0817',
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+  permissionIconContainer: {
+    marginBottom: 30,
+    padding: 20,
+    borderRadius: 50,
+    backgroundColor: 'rgba(247, 37, 133, 0.1)',
+  },
+  permissionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  permissionDescription: {
+    fontSize: 16,
+    color: '#ccc',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 40,
+  },
+  permissionButton: {
+    backgroundColor: '#F72585',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
+    marginBottom: 20,
+  },
+  permissionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  backButton: {
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+  },
+  backButtonText: {
+    color: '#F72585',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#fff',
+    textAlign: 'center',
   },
   overlay: {
     position: 'absolute',
@@ -148,22 +361,22 @@ const styles = StyleSheet.create({
   topLeft: {
     borderTopWidth: CORNER_THICKNESS,
     borderLeftWidth: CORNER_THICKNESS,
-    borderTopLeftRadius: 16,
+    borderTopLeftRadius: CUTOUT_RADIUS,
   },
   topRight: {
     borderTopWidth: CORNER_THICKNESS,
     borderRightWidth: CORNER_THICKNESS,
-    borderTopRightRadius: 16,
+    borderTopRightRadius: CUTOUT_RADIUS,
   },
   bottomLeft: {
     borderBottomWidth: CORNER_THICKNESS,
     borderLeftWidth: CORNER_THICKNESS,
-    borderBottomLeftRadius: 16,
+    borderBottomLeftRadius: CUTOUT_RADIUS,
   },
   bottomRight: {
     borderBottomWidth: CORNER_THICKNESS,
     borderRightWidth: CORNER_THICKNESS,
-    borderBottomRightRadius: 16,
+    borderBottomRightRadius: CUTOUT_RADIUS,
   },
 });
 

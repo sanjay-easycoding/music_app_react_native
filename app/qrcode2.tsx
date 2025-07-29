@@ -23,6 +23,12 @@ const QRCode2 = () => {
       return trackId.split('?')[0]; // Remove any query parameters
     }
     
+    // Handle Spotify URL format: https://spotify.com/track/1A2B3C4D5E6F7G8H9I0J1K
+    if (qrData.includes('spotify.com/track/')) {
+      const trackId = qrData.split('/track/')[1];
+      return trackId.split('?')[0]; // Remove any query parameters
+    }
+    
     return null;
   };
 
@@ -32,9 +38,11 @@ const QRCode2 = () => {
     setScanned(true);
     
     try {
+      console.log('QR Code scanned:', result.data);
       const trackId = extractTrackId(result.data);
       
       if (!trackId) {
+        console.log('No valid track ID found in QR code');
         Alert.alert(
           'Invalid QR Code', 
           'Please scan a valid Spotify track QR code.',
@@ -42,6 +50,8 @@ const QRCode2 = () => {
         );
         return;
       }
+
+      console.log('Extracted track ID:', trackId);
 
       // Navigate to play screen with track ID
       router.push({

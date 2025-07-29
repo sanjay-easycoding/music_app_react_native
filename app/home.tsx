@@ -3,7 +3,7 @@ import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-ico
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Dimensions, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -13,6 +13,8 @@ const Home = () => {
     Inter_600SemiBold,
   });
   const [showMenu, setShowMenu] = useState(false);
+  const [spotifyInstalled, setSpotifyInstalled] = useState<boolean | null>(null);
+  const [checkingSpotify, setCheckingSpotify] = useState(true);
 
   // Animation values
   const welcomeOpacity = useRef(new Animated.Value(0)).current;
@@ -29,90 +31,218 @@ const Home = () => {
     scale: new Animated.Value(0.5),
   }))).current;
 
+  // Check if Spotify is installed
+  const checkSpotifyInstallation = async () => {
+    try {
+      setCheckingSpotify(true);
+      
+      // Try to open Spotify with a test URL
+      const spotifyUrl = 'spotify://';
+      const canOpen = await Linking.canOpenURL(spotifyUrl);
+      
+      setSpotifyInstalled(canOpen);
+    } catch (error) {
+      console.error('Error checking Spotify installation:', error);
+      setSpotifyInstalled(false);
+    } finally {
+      setCheckingSpotify(false);
+    }
+  };
+
+  // Open app store to install Spotify
+  const openAppStore = () => {
+    const storeUrl = Platform.select({
+      ios: 'https://apps.apple.com/app/spotify-music-and-podcasts/id324684580',
+      android: 'https://play.google.com/store/apps/details?id=com.spotify.music',
+    });
+
+    if (storeUrl) {
+      Linking.openURL(storeUrl).catch(() => {
+        Alert.alert(
+          'Error',
+          'Unable to open app store. Please install Spotify manually.',
+          [{ text: 'OK' }]
+        );
+      });
+    }
+  };
+
+  // Retry Spotify check
+  const retrySpotifyCheck = () => {
+    checkSpotifyInstallation();
+  };
+
   useEffect(() => {
-    // Start the welcome animation sequence
-    const startAnimations = () => {
-      // Reset all animations
-      welcomeOpacity.setValue(0);
-      welcomeTranslateY.setValue(20);
-      musicBlastScale.setValue(0.5);
-      musicBlastOpacity.setValue(0);
-      letsStartOpacity.setValue(0);
-      letsStartTranslateY.setValue(20);
-      musicIconScale.setValue(0);
-      musicIconRotate.setValue(0);
-      musicNotes.forEach(note => {
-        note.position.setValue(0);
-        note.opacity.setValue(0);
-        note.scale.setValue(0.5);
-      });
-
-      // Start the sequence
-      Animated.sequence([
-        // Animate "Welcome to"
-        Animated.parallel([
-          Animated.timing(welcomeOpacity, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(welcomeTranslateY, {
-            toValue: 0,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Animate "Music Blast"
-        Animated.parallel([
-          Animated.timing(musicBlastOpacity, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.spring(musicBlastScale, {
-            toValue: 1,
-            tension: 50,
-            friction: 7,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Animate music icon
-        Animated.parallel([
-          Animated.spring(musicIconScale, {
-            toValue: 1,
-            tension: 50,
-            friction: 7,
-            useNativeDriver: true,
-          }),
-          Animated.timing(musicIconRotate, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Animate "Let's Start the Game"
-        Animated.parallel([
-          Animated.timing(letsStartOpacity, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(letsStartTranslateY, {
-            toValue: 0,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start(() => {
-        // After all animations complete, show the menu
-        setShowMenu(true);
-      });
-    };
-
-    startAnimations();
+    // Check Spotify installation on component mount
+    checkSpotifyInstallation();
   }, []);
 
-  if (!fontsLoaded) return null;
+  useEffect(() => {
+    // Only start animations if Spotify is installed
+    if (spotifyInstalled === true) {
+      // Start the welcome animation sequence
+      const startAnimations = () => {
+        // Reset all animations
+        welcomeOpacity.setValue(0);
+        welcomeTranslateY.setValue(20);
+        musicBlastScale.setValue(0.5);
+        musicBlastOpacity.setValue(0);
+        letsStartOpacity.setValue(0);
+        letsStartTranslateY.setValue(20);
+        musicIconScale.setValue(0);
+        musicIconRotate.setValue(0);
+        musicNotes.forEach(note => {
+          note.position.setValue(0);
+          note.opacity.setValue(0);
+          note.scale.setValue(0.5);
+        });
+
+        // Start the sequence
+        Animated.sequence([
+          // Animate "Welcome to"
+          Animated.parallel([
+            Animated.timing(welcomeOpacity, {
+              toValue: 1,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+            Animated.timing(welcomeTranslateY, {
+              toValue: 0,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+          ]),
+          // Animate "Music Blast"
+          Animated.parallel([
+            Animated.timing(musicBlastOpacity, {
+              toValue: 1,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+            Animated.spring(musicBlastScale, {
+              toValue: 1,
+              tension: 50,
+              friction: 7,
+              useNativeDriver: true,
+            }),
+          ]),
+          // Animate music icon
+          Animated.parallel([
+            Animated.spring(musicIconScale, {
+              toValue: 1,
+              tension: 50,
+              friction: 7,
+              useNativeDriver: true,
+            }),
+            Animated.timing(musicIconRotate, {
+              toValue: 1,
+              duration: 1000,
+              useNativeDriver: true,
+            }),
+          ]),
+          // Animate "Let's Start the Game"
+          Animated.parallel([
+            Animated.timing(letsStartOpacity, {
+              toValue: 1,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+            Animated.timing(letsStartTranslateY, {
+              toValue: 0,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+          ]),
+          // Animate music notes
+          Animated.parallel(
+            musicNotes.map((note, index) =>
+              Animated.sequence([
+                Animated.delay(index * 200),
+                Animated.parallel([
+                  Animated.timing(note.opacity, {
+                    toValue: 1,
+                    duration: 600,
+                    useNativeDriver: true,
+                  }),
+                  Animated.spring(note.scale, {
+                    toValue: 1,
+                    tension: 50,
+                    friction: 7,
+                    useNativeDriver: true,
+                  }),
+                  Animated.timing(note.position, {
+                    toValue: 1,
+                    duration: 1000,
+                    useNativeDriver: true,
+                  }),
+                ]),
+              ])
+            )
+          ),
+        ]).start(() => {
+          // After all animations complete, show the menu
+          setShowMenu(true);
+        });
+      };
+
+      // Start animations after a short delay
+      const timer = setTimeout(startAnimations, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [spotifyInstalled]);
+
+  // Show loading state while checking Spotify
+  if (checkingSpotify) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.spotifyCheckContainer}>
+          <View style={styles.loadingIconContainer}>
+            <Ionicons name="musical-notes" size={60} color="#F72585" />
+          </View>
+          <Text style={styles.loadingTitle}>Checking Requirements...</Text>
+          <Text style={styles.loadingDescription}>
+            Verifying Spotify installation...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Show Spotify installation prompt if not installed
+  if (spotifyInstalled === false) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.spotifyCheckContainer}>
+          <View style={styles.spotifyIconContainer}>
+            <Ionicons name="musical-notes" size={80} color="#F72585" />
+          </View>
+          <Text style={styles.spotifyTitle}>Spotify Required</Text>
+          <Text style={styles.spotifyDescription}>
+            Music Blast requires Spotify to be installed on your device to play music tracks and join games.
+          </Text>
+          <TouchableOpacity 
+            style={styles.installButton} 
+            onPress={openAppStore}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.installButtonText}>Install Spotify</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={retrySpotifyCheck}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.retryButtonText}>I've Installed Spotify</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Show main menu if Spotify is installed
+  if (!fontsLoaded || spotifyInstalled !== true) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
@@ -462,6 +592,77 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
     textAlign: 'center',
+  },
+  spotifyCheckContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#0F0817',
+  },
+  loadingIconContainer: {
+    marginBottom: 20,
+  },
+  loadingTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 28,
+    color: '#fff',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  loadingDescription: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+    color: '#fff',
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+  spotifyIconContainer: {
+    marginBottom: 20,
+  },
+  spotifyTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 32,
+    color: '#fff',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  spotifyDescription: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 25,
+    opacity: 0.8,
+  },
+  installButton: {
+    backgroundColor: '#F72585',
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 30,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  installButtonText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 20,
+    color: '#fff',
+  },
+  retryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#F72585',
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 30,
+    width: '100%',
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 20,
+    color: '#F72585',
   },
 });
 
